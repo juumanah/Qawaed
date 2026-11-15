@@ -1,0 +1,42 @@
+name: Foundation verification
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: qawaed_test
+          POSTGRES_PASSWORD: ci-migration-password
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d qawaed_test"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      MIGRATION_DATABASE_URL: postgres://postgres:ci-migration-password@localhost:5432/qawaed_test
+      DATABASE_URL: postgres://qawaed_app:ci-application-password@localhost:5432/qawaed_test
+      APP_DB_PASSWORD: ci-application-password
+      SEED_DEMO: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose up --build --wait --wait-timeout 300
+      - run: curl --fail http://localhost:4000/health && curl --fail http://localhost:3000/api/health
+      - if: always()
+        run: docker compose logs --tail=100
+      - if: always()
+        run: docker compose down -v
