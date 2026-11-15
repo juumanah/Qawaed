@@ -1,0 +1,1 @@
+module.exports={testEnvironment:'node',transform:{'^.+\\.tsx?$':['ts-jest',{tsconfig:{experimentalDecorators:true,emitDecoratorMetadata:true,esModuleInterop:true,strict:true}}]},testMatch:['**/test/**/*.spec.ts'],testTimeout:30000};
