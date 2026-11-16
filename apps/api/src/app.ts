@@ -8,6 +8,8 @@ import {
 } from "@nestjs/common";
 import { APP_GUARD, NestFactory } from "@nestjs/core";
 import { Database } from "./database";
+import { TenantsController, TenantsService } from "./tenants";
+import { RolesGuard } from "./roles.guard";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { AuthGuard, Public } from "./auth.guard";
@@ -28,10 +30,12 @@ export class HealthController {
   }
 }
 @Module({
-  controllers: [HealthController, AuthController],
+  controllers: [HealthController, AuthController, TenantsController],
   providers: [
     Database,
     AuthService,
+    RolesGuard,
+    TenantsService,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
 })
