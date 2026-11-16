@@ -8,3 +8,8 @@ coverage/
 *.log
 
 *.tsbuildinfo
+
+# Personal editor settings and study notes
+.vscode/
+/docs/PHASE_*_REVIEW.md
+/ENGINEERING_REVIEW.md
