@@ -1,4 +1,5 @@
 import pg from "pg";
+import bcrypt from "bcryptjs";
 import { readFile, readdir } from "node:fs/promises";
 const url = process.env.MIGRATION_DATABASE_URL;
 const password = process.env.APP_DB_PASSWORD;
@@ -61,6 +62,47 @@ try {
           "INSERT INTO tenants(id,name,identifier_cr) VALUES($1,$2,$3) ON CONFLICT DO NOTHING",
           [id, name, cr],
         );
+      const demoPassword = process.env.DEMO_PASSWORD ?? "QawaedDemo!2026";
+      if (
+        demoPassword.length < 12 ||
+        Buffer.byteLength(demoPassword, "utf8") > 72
+      )
+        throw Error(
+          "Demo password must be 12+ characters and at most 72 UTF-8 bytes",
+        );
+      const hash = await bcrypt.hash(demoPassword, 12);
+      for (const [email, name, role, tenantId] of [
+        [
+          "submitter@aram.test",
+          "Aram Submitter",
+          "SUBMITTER",
+          "00000000-0000-4000-8000-000000000001",
+        ],
+        [
+          "auditor@aram.test",
+          "Aram Auditor",
+          "AUDITOR",
+          "00000000-0000-4000-8000-000000000001",
+        ],
+        [
+          "submitter@riyadh.test",
+          "Riyadh Submitter",
+          "SUBMITTER",
+          "00000000-0000-4000-8000-000000000002",
+        ],
+        [
+          "auditor@riyadh.test",
+          "Riyadh Auditor",
+          "AUDITOR",
+          "00000000-0000-4000-8000-000000000002",
+        ],
+        ["admin@qawaed.test", "System Admin", "ADMIN", null],
+      ]) {
+        await client.query(
+          "INSERT INTO users(email,name,role,tenant_id,password_hash) VALUES($1,$2,$3,$4,$5) ON CONFLICT (email) DO NOTHING",
+          [email, name, role, tenantId, hash],
+        );
+      }
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");
