@@ -40,6 +40,7 @@ jobs:
           node-version: 22
       - run: curl --fail http://localhost:4000/health
       - run: node scripts/smoke-identity.mjs
+      - run: node scripts/smoke-filings.mjs
       - if: always()
         run: docker compose logs --tail=100
       - if: always()
