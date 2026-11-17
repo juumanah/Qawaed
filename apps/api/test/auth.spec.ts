@@ -139,7 +139,15 @@ describe("identity — real PostgreSQL and HTTP", () => {
         )
       ).rows,
     ).toEqual(before);
-    expect(before).toHaveLength(5);
+    expect(before.map((user: { email: string }) => user.email)).toEqual(
+      expect.arrayContaining([
+        "submitter@aram.test",
+        "auditor@aram.test",
+        "submitter@riyadh.test",
+        "auditor@riyadh.test",
+        "admin@qawaed.test",
+      ]),
+    );
   });
 });
 describe("authentication unit behavior", () => {
