@@ -7,6 +7,8 @@ import {
   ValidationPipe,
 } from "@nestjs/common";
 import { APP_GUARD, NestFactory } from "@nestjs/core";
+import { FilingsController } from "./filings";
+import { FilingsService } from "./filings.service";
 import { Database } from "./database";
 import { TenantsController, TenantsService } from "./tenants";
 import { RolesGuard } from "./roles.guard";
@@ -30,12 +32,18 @@ export class HealthController {
   }
 }
 @Module({
-  controllers: [HealthController, AuthController, TenantsController],
+  controllers: [
+    HealthController,
+    AuthController,
+    TenantsController,
+    FilingsController,
+  ],
   providers: [
     Database,
     AuthService,
     RolesGuard,
     TenantsService,
+    FilingsService,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
 })

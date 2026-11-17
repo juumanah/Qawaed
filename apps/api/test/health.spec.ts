@@ -100,7 +100,7 @@ describe("foundation integration — disposable PostgreSQL only", () => {
       ]);
     }
   });
-  it("does not expose unfinished business endpoints", async () => {
-    await request(app.getHttpServer()).get("/filings").expect(404);
+  it("protects filing endpoints before authentication", async () => {
+    await request(app.getHttpServer()).get("/filings").expect(401);
   });
 });

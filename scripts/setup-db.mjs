@@ -103,6 +103,55 @@ try {
           [email, name, role, tenantId, hash],
         );
       }
+      //fixed IDs make demo filings repeatable without resetting user edits
+      //demo filings start at different workflow stages for exploration
+      //their initial audit entry is a seed snapshot, not a simulated review history
+      for (const [tenantId, email, cr, tenantNumber] of [
+        [
+          "00000000-0000-4000-8000-000000000001",
+          "submitter@aram.test",
+          "1010123456",
+          1,
+        ],
+        [
+          "00000000-0000-4000-8000-000000000002",
+          "submitter@riyadh.test",
+          "1010654321",
+          2,
+        ],
+      ]) {
+        const owner = (
+          await client.query(
+            "SELECT id FROM users WHERE email=$1 AND tenant_id=$2 AND role='SUBMITTER'",
+            [email, tenantId],
+          )
+        ).rows[0];
+        if (!owner) continue;
+        const states = [
+          "DRAFT",
+          "SUBMITTED",
+          "UNDER_REVIEW",
+          "APPROVED",
+          "REJECTED",
+        ];
+        for (const [index, status] of states.entries()) {
+          const id = `f0000000-0000-4000-8000-${String(Number(tenantNumber) * 100 + index).padStart(12, "0")}`;
+          await client.query(
+            "INSERT INTO compliance_filings(id,tenant_id,created_by,title,identifier_cr,category,expiration_date,status,rejection_reason) VALUES($1,$2,$3,$4,$5,'COMMERCIAL','2099-12-31',$6,$7) ON CONFLICT(id) DO NOTHING",
+            [
+              id,
+              tenantId,
+              owner.id,
+              `Demo commercial license — ${status}`,
+              cr,
+              status,
+              status === "REJECTED"
+                ? "Demo: supporting evidence is incomplete"
+                : null,
+            ],
+          );
+        }
+      }
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");

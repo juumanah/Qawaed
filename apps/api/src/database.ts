@@ -25,9 +25,12 @@ export class Database implements OnApplicationShutdown {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
+
+      //use the authenticated user's identity for every query in this transaction
+      //local settings expire on commit or rollback, preventing pool context leaks
       await client.query(
-        "SELECT set_config('app.tenant_id',$1,true),set_config('app.role',$2,true)",
-        [actor.tenant_id ?? "", actor.role],
+        "SELECT set_config('app.tenant_id',$1,true),set_config('app.role',$2,true),set_config('app.actor_id',$3,true),set_config('app.actor_name',$4,true)",
+        [actor.tenant_id ?? "", actor.role, actor.id, actor.name],
       );
       const result = await work(client);
       await client.query("COMMIT");
