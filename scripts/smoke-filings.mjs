@@ -96,6 +96,36 @@ try {
   console.log(
     "PASS: filing creation -> submission -> review -> approval; cross-tenant 404, illegal hop 422, stale decision 409, four audit events",
   );
+  if (process.env.SMOKE_REGISTRY === "true") {
+    const deadline = Date.now() + 90000;
+    let result;
+    do {
+      result = await (
+        await call(`/filings/${filing.id}`, 200, { cookie: submitter })
+      ).json();
+      if (["VERIFIED", "FAILED"].includes(result.verification?.status)) break;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    } while (Date.now() < deadline);
+    assert.equal(result.status, "APPROVED");
+    assert.equal(result.version, filing.version);
+    assert.equal(result.audit.length, 4);
+    const verification = result.verification;
+    assert.ok(
+      verification && ["VERIFIED", "FAILED"].includes(verification.status),
+      "Registry worker did not finish within 90 seconds",
+    );
+    assert.ok(verification.attempt >= 1 && verification.attempt <= 4);
+    if (verification.status === "VERIFIED") {
+      assert.match(verification.reference_id, /^REG-[0-9a-f-]{36}$/i);
+      assert.ok(Number.isFinite(Date.parse(verification.verified_at)));
+    } else {
+      assert.equal(verification.attempt, 4);
+      assert.ok(verification.last_error);
+    }
+    console.log(
+      `PASS: async registry reached ${verification.status} after ${verification.attempt} attempt(s); approved filing and audit unchanged`,
+    );
+  }
   console.log(`Demo filing retained for inspection: ${filing.id}`);
 } finally {
   for (const cookie of active)

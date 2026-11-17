@@ -4,7 +4,7 @@
 
 Compliance work gets harder when it is unclear who can access a record, who can make a decision, and what changed along the way. Qawaed brings those responsibilities into one workflow, with separate data for each organization.
 
-**Current progress:** sign-in, revocable sessions, tenant-scoped filings, controlled reviews, optimistic concurrency and append-only audit history are implemented. Registry verification and the full dashboard are next.
+**Current progress:** sign-in, revocable sessions, tenant-scoped filings, controlled reviews, optimistic concurrency and append-only audit history are implemented. Durable registry verification is also implemented; the full dashboard is next.
 
 ## Run
 
@@ -44,10 +44,11 @@ Demo credentials and Compose database passwords are public development defaults.
 | GET | /tenants/:id | Own tenant or ADMIN; 404 for invisible/unknown tenant |
 | GET | /filings | Scoped, newest-first list; optional status and page (20 rows/page) |
 | GET | /filings/summary | Scoped counts grouped by state |
-| GET | /filings/:id | Filing plus ordered audit history; invisible records return 404 |
+| GET | /filings/:id | Filing plus ordered audit history and a separate verification result; invisible records return 404 |
 | POST | /filings | SUBMITTER creates DRAFT; tenant and owner come from session |
 | PATCH | /filings/:id | Owner replaces draft metadata; current version required |
 | POST | /filings/:id/transitions | Role-controlled next state; current version required |
+| POST | /mock-registry/verify | Service-secret authenticated mock; validated idempotency header required |
 
 All POST and PATCH requests must carry `Origin: http://localhost:3000` (or the configured `WEB_ORIGIN`). Login accepts only `email` and `password`. Tenant ID and role come from the database session identity, never from request headers or the login body. Browser callers use `/api/auth/...` through the web proxy.
 
@@ -63,17 +64,17 @@ Invoke-RestMethod -Uri 'http://localhost:3000/api/auth/logout' -Method Post -Hea
 
 ## Tests
 
-Use only a disposable demo/test database. The tests create sessions, test users and filings, temporarily edit and restore a tenant name, and run repeatable setup. They expect the supplied two-tenant/five-user seed; additional test users stay in the disposable test database.
+The isolated test runner creates a uniquely named temporary database and removes it after the run. It does not test against or clear your demo database. Run one test process at a time per local PostgreSQL instance; setup uses shared application/worker roles with the configured passwords.
 
 ```sh
-docker compose run --rm api sh -c "node scripts/setup-db.mjs && npm test"
+docker compose run --rm api npm run test:isolated
 docker compose exec -T -e SMOKE_BASE_URL=http://web:3000 api node scripts/smoke-identity.mjs
-docker compose exec -T -e SMOKE_BASE_URL=http://web:3000 api node scripts/smoke-filings.mjs
+docker compose exec -T -e SMOKE_BASE_URL=http://web:3000 -e SMOKE_REGISTRY=true api node scripts/smoke-filings.mjs
 ```
 
-Jest runs 75 tests: 32 unit tests and 43 PostgreSQL/HTTP integration tests. This includes all 25 state pairs and 20 concurrent final decisions across two auditor accounts: one succeeds and 19 receive 409, with one final audit entry. The smoke scripts exercise the production web proxy, API and database together. The filings script leaves one clearly named demo filing per run for inspection. These are HTTP smoke checks, not browser UI tests.
+Jest runs 95 tests: 32 unit tests and 63 PostgreSQL/HTTP integration tests. The 20 registry tests cover durable deduplication, backoff, competing workers, stale leases, crash reconciliation, terminal immutability and access boundaries. This includes all 25 state pairs and 20 concurrent final decisions across two auditor accounts: one succeeds and 19 receive 409, with one final audit entry. The smoke scripts exercise the production web proxy, API and database together. The filings script leaves one clearly named demo filing per run for inspection. With `SMOKE_REGISTRY=true`, it also waits for the asynchronous result. The 30% failure simulation remains enabled: VERIFIED and a bounded FAILED after four attempts are both valid terminal outcomes, and the script prints which occurred. Deterministic tests force both success and failure. These are HTTP smoke checks, not browser UI tests.
 
-Host development: Node.js 22+, PostgreSQL 17, `npm ci`. Supply `MIGRATION_DATABASE_URL`, `DATABASE_URL`, `APP_DB_PASSWORD` (16+ characters), `SEED_DEMO=true`, and optionally `DEMO_PASSWORD`/`WEB_ORIGIN` as process environment variables. Scripts do not automatically load `.env`. Then run `npm run db:setup`, `npm test`, `npm run build`; start development with `npm run dev:api` and `npm run dev:web` in separate terminals.
+Host development: Node.js 22+, PostgreSQL 17, `npm ci`. Supply `MIGRATION_DATABASE_URL`, `DATABASE_URL`, `APP_DB_PASSWORD` (16+ characters), `SEED_DEMO=true`, `WORKER_DATABASE_URL`, `WORKER_DB_PASSWORD` (16+ characters), `REGISTRY_SECRET` (32+ characters), and optionally `DEMO_PASSWORD`/`WEB_ORIGIN` as process environment variables. Scripts do not automatically load `.env`. Set `WORKER_ENABLED=false` for direct tests, or use `npm run test:isolated`. Set `WORKER_ENABLED=true` to run the background worker during development (Compose already does this). Then run `npm run db:setup`, `npm run test:isolated`, `npm run build`; start development with `npm run dev:api` and `npm run dev:web` in separate terminals.
 
 CI defines a PostgreSQL test/build job and a Compose production smoke job. Run the commands above to verify your checkout; check GitHub Actions after pushing to confirm the CI results.
 
@@ -82,7 +83,7 @@ CI defines a PostgreSQL test/build job and a Compose production smoke job. Run t
 - A modular monolith keeps deployment simple. Controllers handle HTTP; `AuthService`, `TenantsService` and `FilingsService` handle application operations; `Database` manages connections and scoped transactions.
 - Passwords use bcrypt cost 12. Inputs longer than 72 UTF-8 bytes are rejected to avoid bcrypt truncation. Login returns the same error for an unknown account and an incorrect password.
 - Sessions use 32 random bytes. Only SHA-256 token digests are stored. Cookies are HttpOnly, SameSite=Strict and expire after eight hours; logout deletes the server-side session. Roles are reread on each authenticated request.
-- A global authentication guard protects routes by default. Only health, login and logout are explicitly public. The role guard denies access unless the route explicitly allows the current role.
+- A global authentication guard protects routes by default. Health, login and logout bypass session authentication. The mock registry also bypasses sessions but requires a separate service secret; it is not an anonymously usable endpoint. The role guard denies access unless the route explicitly allows the current role.
 - Tenant queries use a transaction-scoped server identity and PostgreSQL RLS. `SET LOCAL` clears scope at commit/rollback. The runtime DB role is neither superuser nor BYPASSRLS and does not own tables. ADMIN can read all tenant rows but cannot write them.
 - RLS is defense against missing tenant filters in application queries, not against arbitrary SQL execution with the application's DB credential. Authentication tables are trusted server-internal tables; runtime can read users and manage sessions but cannot change users/roles. These tables have no public management endpoints.
 - Origin checks, strict DTO validation, Helmet and no-store responses protect the HTTP boundary. Login is limited to 30 requests per 15 minutes per observed source IP on a single API instance. Behind the web proxy this may aggregate clients; do not enable broad `trust proxy` to work around it. A deployment with trusted proxies/multiple replicas needs explicitly scoped proxy trust and a shared limiter.
@@ -102,11 +103,22 @@ Updates use `WHERE id = $id AND version = $expected` and increment the version o
 
 A database trigger writes each creation, edit and transition audit in the same transaction, capturing actor identity and before/after snapshots. Rollback removes both changes. Audit ordering follows the filing version. RLS protects filings and their audit history, even when a query omits its tenant filter. Runtime credentials cannot insert, update or delete audit rows directly; database guards also reject terminal mutations and illegal lifecycle changes. A database owner remains a trusted operator, so this is not a cryptographic tamper-proof ledger.
 
-Approval currently finishes the internal review only. Phase 4 will add verification in a separate job/result record so that retries cannot mutate a terminal filing. Existing approved demo filings will need job backfill in that migration.
+## Registry verification and retry decisions
+
+Approval enqueues a unique verification job in the same database transaction as the verdict and audit. A new migration also queues already-approved filings without editing their metadata or history. Re-running setup does not reset existing jobs.
+
+A lightweight worker in the API process polls PostgreSQL every 500 ms. It claims one job using `FOR UPDATE SKIP LOCKED`, with a 30-second lease and a unique lease token. No Redis service is needed for this assessment. A worker with an expired token cannot overwrite a newer worker's result. At higher throughput, the same worker can move to a separate process; worker capacity and database load must then be measured.
+
+The worker calls `POST /mock-registry/verify` with a five-second timeout, `X-Registry-Secret`, the configured Origin and `Idempotency-Key: filing-<uuid>-<attempt>`. The mock rejects unapproved/unknown filings and mismatched CRs. First-time validation returns 503 when `Math.random() < 0.3`. Already-recorded validations return their existing result, even during a simulated outage.
+
+Failed calls are scheduled after 1, 2 and 4 seconds: four logical attempts in total, then FAILED. A crashed delivery is recovered after lease expiry with the **same** attempt number, including attempt four. This makes delivery at-least-once; it does not claim exactly-once HTTP delivery. Repeated process crashes can cause additional deliveries of a logical attempt. The database's unique filing ID ensures one validation record across different attempt keys and restarts. Invalid responses and transport failures are retried too; stored errors contain no raw connection details.
+
+The worker's DB role can read/update job processing fields and read/insert mock results. It cannot read sessions, users or filings, change job identity fields, delete jobs or modify registry records. The normal API role can only read verification jobs through filing RLS, including submitter ownership. Both roles are non-superuser/non-BYPASSRLS. Credentials are separate but share one API process; process isolation is a possible later hardening step.
+
+`GET /filings/:id` includes `verification: null` before approval, or a job summary with status, attempt, next available time, reference, timestamp and sanitized error. APPROVED remains the internal review verdict even if external verification ultimately fails. The result never rewrites a terminal filing or adds fictitious reviewer decisions to its audit. FAILED jobs need operator investigation; automatic infinite retry and a manual retry endpoint are deliberately not included.
 
 ## Remaining milestones
 
-4. Registry verification, durable retries and idempotency.
 5. shadcn UI, Arabic/English, browser acceptance and final documentation.
 
 Password reset, user administration and MFA are outside this assessment milestone.

@@ -19,6 +19,10 @@ jobs:
       MIGRATION_DATABASE_URL: postgres://postgres:ci-migration-password@localhost:5432/qawaed_test
       DATABASE_URL: postgres://qawaed_app:ci-application-password@localhost:5432/qawaed_test
       APP_DB_PASSWORD: ci-application-password
+      WORKER_DATABASE_URL: postgres://qawaed_worker:ci-worker-password@localhost:5432/qawaed_test
+      WORKER_DB_PASSWORD: ci-worker-password
+      REGISTRY_SECRET: ci-registry-secret-at-least-32-characters
+      WORKER_ENABLED: "false"
       SEED_DEMO: "true"
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
@@ -41,6 +45,8 @@ jobs:
       - run: curl --fail http://localhost:4000/health
       - run: node scripts/smoke-identity.mjs
       - run: node scripts/smoke-filings.mjs
+        env:
+          SMOKE_REGISTRY: "true"
       - if: always()
         run: docker compose logs --tail=100
       - if: always()
