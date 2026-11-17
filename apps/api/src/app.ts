@@ -1,4 +1,6 @@
 import "reflect-metadata";
+import { RegistryController, RegistryWorker } from "./registry";
+import { RegistryDatabase } from "./registry.database";
 import {
   Controller,
   Get,
@@ -34,12 +36,15 @@ export class HealthController {
 @Module({
   controllers: [
     HealthController,
+    RegistryController,
     AuthController,
     TenantsController,
     FilingsController,
   ],
   providers: [
     Database,
+    RegistryDatabase,
+    RegistryWorker,
     AuthService,
     RolesGuard,
     TenantsService,

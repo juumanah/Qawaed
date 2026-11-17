@@ -88,7 +88,10 @@ export class FilingsService {
         "SELECT * FROM audit_logs WHERE filing_id=$1 ORDER BY (metadata->'after'->>'version')::int,id",
         [id],
       );
-      return { ...f, audit: audit.rows };
+      const verification = await c.query(
+        "SELECT status,attempt,available_at,reference_id,verified_at,last_error FROM verification_jobs WHERE filing_id=$1", [id],
+      );
+      return { ...f, audit: audit.rows, verification: verification.rows[0] ?? null };
     });
   }
   create(actor: Actor, dto: FilingDto) {

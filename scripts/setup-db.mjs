@@ -6,6 +6,9 @@ const password = process.env.APP_DB_PASSWORD;
 if (!url) throw new Error("MIGRATION_DATABASE_URL required");
 if (!password || password.length < 16)
   throw new Error("APP_DB_PASSWORD must be at least 16 characters");
+const workerPassword = process.env.WORKER_DB_PASSWORD;
+if (!workerPassword || workerPassword.length < 16)
+  throw new Error("WORKER_DB_PASSWORD must be at least 16 characters");
 const pool = new pg.Pool({ connectionString: url });
 const client = await pool.connect();
 try {
@@ -20,6 +23,9 @@ try {
   await client.query(
     `ALTER ROLE qawaed_app PASSWORD '${password.replaceAll("'", "''")}'`,
   );
+  if (!(await client.query("SELECT 1 FROM pg_roles WHERE rolname='qawaed_worker'")).rowCount)
+    await client.query("CREATE ROLE qawaed_worker LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE");
+  await client.query(`ALTER ROLE qawaed_worker PASSWORD '${workerPassword.replaceAll("'", "''")}'`);
   await client.query(
     "CREATE TABLE IF NOT EXISTS schema_migrations(name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())",
   );

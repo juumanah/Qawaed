@@ -20,6 +20,11 @@ services:
       DATABASE_URL: postgres://qawaed_app:${APP_DB_PASSWORD:-local-application-password}@db:5432/qawaed
       MIGRATION_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-local-migration-password-change-me}@db:5432/qawaed
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:-local-application-password}
+      WORKER_DATABASE_URL: postgres://qawaed_worker:${WORKER_DB_PASSWORD:-local-worker-password-change-me}@db:5432/qawaed
+      WORKER_DB_PASSWORD: ${WORKER_DB_PASSWORD:-local-worker-password-change-me}
+      REGISTRY_SECRET: ${REGISTRY_SECRET:-local-registry-secret-change-me-32-chars}
+      WORKER_ENABLED: "true"
+      REGISTRY_URL: http://127.0.0.1:4000/mock-registry/verify
       SEED_DEMO: "true"
       PORT: "4000"
       WEB_ORIGIN: http://localhost:3000

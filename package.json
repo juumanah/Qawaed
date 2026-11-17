@@ -10,7 +10,8 @@
     "test": "npm run test -w apps/api",
     "db:setup": "node scripts/setup-db.mjs",
     "dev:api": "npm run dev -w apps/api",
-    "dev:web": "npm run dev -w apps/web"
+    "dev:web": "npm run dev -w apps/web",
+    "test:isolated": "node scripts/test-isolated.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
