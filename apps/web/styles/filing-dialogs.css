@@ -484,6 +484,8 @@
   background: #edf2ee;
   border-radius: 50%;
   font-size: 11px;
+  width: 22px;
+  min-width: 22px;
 }
 .registry-details {
   margin-top: 12px;
@@ -543,4 +545,33 @@
   .detail-grid {
     gap: 16px;
   }
+}
+
+/* Keep both panels readable without placing the full audit below every decision. */
+.filing-tabs {
+  margin-top: 16px;
+  min-width: 0;
+}
+.filing-tab-panel {
+  min-width: 0;
+  padding-top: 8px;
+}
+.filing-tab-panel > p {
+  margin-top: 15px;
+}
+.filing-tab-panel > .audit {
+  border-top: 0;
+  padding-top: 8px;
+}
+.filing-tabs [role="tab"] {
+  min-height: 40px;
+  white-space: normal;
+}
+.filing-tabs [role="tablist"] {
+  height: auto;
+}
+.filing-tab-panel:focus-visible {
+  outline: 2px solid #385f4b;
+  outline-offset: 3px;
+  border-radius: 6px;
 }

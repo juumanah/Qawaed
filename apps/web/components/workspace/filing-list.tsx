@@ -3,6 +3,7 @@ import { copy, labels } from "@/lib/copy";
 import type { Workspace } from "@/hooks/use-workspace";
 import { Files, Search, X, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -73,10 +74,12 @@ export function FilingList({
   );
   const allCount = Object.values(counts).reduce((a, b) => a + b, 0);
   return (
-    <section
+    <Card
+      role="region"
+      aria-label={t.filings}
       id="workspace-main"
       tabIndex={-1}
-      className="filings-panel"
+      className="filings-panel block gap-0 py-0"
       aria-busy={loading}
     >
       <div className="list-toolbar">
@@ -254,6 +257,6 @@ export function FilingList({
           </div>
         </div>
       )}
-    </section>
+    </Card>
   );
 }
