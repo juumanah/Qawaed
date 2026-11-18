@@ -1,0 +1,238 @@
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--card);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: #fff;
+  --color-secondary: #eef1ee;
+  --color-secondary-foreground: #36453e;
+  --color-muted: #f1f3f0;
+  --color-muted-foreground: #758078;
+  --color-accent: #eaf0eb;
+  --color-accent-foreground: #193e32;
+  --color-destructive: #b53b3b;
+  --color-border: #e1e7e1;
+  --color-input: #d9e0d9;
+  --color-ring: #5e927b;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 18px;
+}
+:root {
+  --card: #fff;
+  --radius: 12px;
+}
+* {
+  box-sizing: border-box;
+  border-color: #e1e7e1;
+}
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, "Tahoma", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #73ad91;
+  outline-offset: 3px;
+}
+[dir="rtl"] {
+  font-family: Tahoma, Arial, sans-serif;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 26px;
+  letter-spacing: -1px;
+  font-weight: 700;
+}
+.brand small {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 1.35px;
+  font-weight: 500;
+  margin-top: 1px;
+}
+.brand-symbol {
+  width: 40px;
+  height: 44px;
+  border-radius: 12px 12px 18px 12px;
+  background: #245c46;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+}
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 1.7px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.status {
+  font-size: 11px;
+  padding: 4px 8px;
+  border: 0;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.status:before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-inline-end: 3px;
+}
+.error {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #fff0ed;
+  color: #a34535;
+}
+.success {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #e8f5e9;
+  color: #286341;
+}
+.alert {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+.alert button {
+  padding-inline-start: 15px;
+}
+.loading-screen {
+  height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 20px;
+  color: #63825d;
+}
+[dir="rtl"] .eyebrow,
+[dir="rtl"] .brand small {
+  letter-spacing: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *:before,
+  *:after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.skip-link {
+  position: fixed;
+  inset-inline-start: 16px;
+  top: -80px;
+  z-index: 100;
+  padding: 12px 18px;
+  background: white;
+  color: #173e32;
+  border: 2px solid currentColor;
+}
+.skip-link:focus {
+  top: 12px;
+}
+:root {
+  --background: #f3f6f5;
+  --foreground: #172e27;
+  --primary: #23614b;
+}
+body,
+[dir="rtl"] {
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+[dir="rtl"] {
+  letter-spacing: normal;
+}
+.muted {
+  color: #586c62;
+}
+.eyebrow {
+  color: #596f63;
+}
+.status {
+  font-size: 12px;
+  font-weight: 600;
+}
+.status-DRAFT {
+  color: #526159;
+  background: #edf1ee;
+}
+.status-SUBMITTED,
+.status-PENDING {
+  color: #315a91;
+  background: #edf3ff;
+}
+.status-UNDER_REVIEW,
+.status-PROCESSING {
+  color: #805d14;
+  background: #fff5d9;
+}
+.status-APPROVED,
+.status-VERIFIED {
+  color: #21613e;
+  background: #e9f6ed;
+}
+.status-REJECTED,
+.status-FAILED {
+  color: #9d3534;
+  background: #fff0ee;
+}
+[data-slot="dialog-content"] > [data-slot="dialog-close"] {
+  right: auto;
+  inset-inline-end: 16px;
+  top: 16px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: #eef3f0;
+  border-radius: 50%;
+  opacity: 1;
+  color: #3d5548;
+}
+@media (max-width: 760px) {
+  .brand-symbol {
+    width: 38px;
+    height: 42px;
+    font-size: 26px;
+  }
+}

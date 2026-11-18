@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "Qawaed | Foundation",
-  description: "Compliance and audit vault",
+  title: "Qawaed | Compliance, with confidence",
+  description: "A clear path from filing to verified compliance.",
 };
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );

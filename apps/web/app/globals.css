@@ -1,7 +1,5 @@
 @import "tailwindcss";
-body {
-  margin: 0;
-  background: #fafbf9;
-  color: #172b24;
-  font-family: Arial, sans-serif;
-}
+@import "../styles/base.css";
+@import "../styles/workspace.css";
+@import "../styles/filing-dialogs.css";
+@import "../styles/login.css";
