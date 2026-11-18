@@ -6,8 +6,8 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { Database } from "./database";
-import { Actor } from "./identity";
+import { Database } from "../database/database";
+import { Actor } from "../auth/identity";
 import { assertTransition, assertTransitionRole } from "./filing.policy";
 import { FilingDto, EditDto, TransitionDto, ListDto } from "./filing.dto";
 type FilingRow = {
@@ -89,9 +89,14 @@ export class FilingsService {
         [id],
       );
       const verification = await c.query(
-        "SELECT status,attempt,available_at,reference_id,verified_at,last_error FROM verification_jobs WHERE filing_id=$1", [id],
+        "SELECT status,attempt,available_at,reference_id,verified_at,last_error FROM verification_jobs WHERE filing_id=$1",
+        [id],
       );
-      return { ...f, audit: audit.rows, verification: verification.rows[0] ?? null };
+      return {
+        ...f,
+        audit: audit.rows,
+        verification: verification.rows[0] ?? null,
+      };
     });
   }
   create(actor: Actor, dto: FilingDto) {
@@ -150,15 +155,14 @@ export class FilingsService {
       this.visible(actor, f);
       assertTransitionRole(actor.role, dto.status);
 
-  // the reviewer maybe acting on an older copy of this filing soo
-  // ask them to refresh instead of overwriting a newer decision
-
+      // the reviewer maybe acting on an older copy of this filing soo
+      // ask them to refresh instead of overwriting a newer decision
 
       this.version(f, dto.version);
       assertTransition(f.status, dto.status, dto.rejection_reason);
 
       //check the version again inside the update: another req couldve changed the filing since we read it
-      
+
       const r = await c.query(
         `UPDATE compliance_filings SET status=$1,version=version+1,rejection_reason=$2,assigned_reviewer_id=CASE WHEN $1='UNDER_REVIEW' THEN $3 ELSE assigned_reviewer_id END WHERE id=$4 AND version=$5 RETURNING *`,
         [
@@ -183,7 +187,6 @@ export class FilingsService {
     if (!f || (actor.role === "SUBMITTER" && f.created_by !== actor.id))
       throw new NotFoundException("Filing not found");
   }
-
 
   private version(f: FilingRow, v: number) {
     if (f.version !== v)

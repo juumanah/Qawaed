@@ -5,7 +5,7 @@ import {
 } from "@nestjs/common";
 import { createHash, randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { Database } from "./database";
+import { Database } from "../database/database";
 import { Actor } from "./identity";
 export const SESSION_COOKIE = "qawaed_session";
 export const SESSION_MS = 8 * 60 * 60 * 1000;

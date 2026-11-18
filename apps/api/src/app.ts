@@ -1,58 +1,11 @@
 import "reflect-metadata";
-import { RegistryController, RegistryWorker } from "./registry";
-import { RegistryDatabase } from "./registry.database";
-import {
-  Controller,
-  Get,
-  Module,
-  ServiceUnavailableException,
-  ValidationPipe,
-} from "@nestjs/common";
-import { APP_GUARD, NestFactory } from "@nestjs/core";
-import { FilingsController } from "./filings";
-import { FilingsService } from "./filings.service";
-import { Database } from "./database";
-import { TenantsController, TenantsService } from "./tenants";
-import { RolesGuard } from "./roles.guard";
-import { AuthController } from "./auth.controller";
-import { AuthService } from "./auth.service";
-import { AuthGuard, Public } from "./auth.guard";
+import { ValidationPipe } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import { AppModule } from "./app.module";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import { Request, Response, NextFunction } from "express";
-@Controller()
-export class HealthController {
-  constructor(private readonly database: Database) {}
-  @Public() @Get("health") async health() {
-    try {
-      await this.database.ready();
-    } catch {
-      throw new ServiceUnavailableException("Database unavailable");
-    }
-    return { status: "ok", database: "up" };
-  }
-}
-@Module({
-  controllers: [
-    HealthController,
-    RegistryController,
-    AuthController,
-    TenantsController,
-    FilingsController,
-  ],
-  providers: [
-    Database,
-    RegistryDatabase,
-    RegistryWorker,
-    AuthService,
-    RolesGuard,
-    TenantsService,
-    FilingsService,
-    { provide: APP_GUARD, useClass: AuthGuard },
-  ],
-})
-class AppModule {}
 export async function createApp() {
   const app = await NestFactory.create(AppModule);
   const origin = process.env.WEB_ORIGIN ?? "http://localhost:3000";

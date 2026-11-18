@@ -1,6 +1,6 @@
 import { createApp } from "../src/app";
-import { AuthService, tokenDigest } from "../src/auth.service";
-import { Database } from "../src/database";
+import { AuthService, tokenDigest } from "../src/auth/auth.service";
+import { Database } from "../src/database/database";
 import request from "supertest";
 import pg from "pg";
 import { execFileSync } from "node:child_process";

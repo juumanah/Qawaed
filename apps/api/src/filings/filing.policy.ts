@@ -3,7 +3,7 @@ import {
   ForbiddenException,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { Role } from "./identity";
+import { Role } from "../auth/identity";
 const transitions: Record<string, readonly string[]> = {
   DRAFT: ["SUBMITTED"],
   SUBMITTED: ["UNDER_REVIEW"],

@@ -9,7 +9,7 @@ import {
   Query,
   Req,
 } from "@nestjs/common";
-import { AuthRequest } from "./auth.guard";
+import { AuthRequest } from "../auth/auth.guard";
 import { FilingsService } from "./filings.service";
 import { FilingDto, EditDto, TransitionDto, ListDto } from "./filing.dto";
 @Controller("filings")

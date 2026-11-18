@@ -1,6 +1,6 @@
 import { ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { RolesGuard } from "../src/roles.guard";
+import { RolesGuard } from "../src/auth/roles.guard";
 import { createApp } from "../src/app";
 import request from "supertest";
 

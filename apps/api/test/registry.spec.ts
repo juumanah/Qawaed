@@ -1,8 +1,9 @@
 import { createApp } from "../src/app";
-import { RegistryController, RegistryWorker } from "../src/registry";
-import { RegistryDatabase } from "../src/registry.database";
-import { Database } from "../src/database";
-import { Actor } from "../src/identity";
+import { RegistryController } from "../src/registry/registry.controller";
+import { RegistryWorker } from "../src/registry/registry.worker";
+import { RegistryDatabase } from "../src/registry/registry.database";
+import { Database } from "../src/database/database";
+import { Actor } from "../src/auth/identity";
 import pg from "pg";
 import request from "supertest";
 import { execFileSync } from "node:child_process";

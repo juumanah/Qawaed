@@ -1,6 +1,6 @@
 import { Injectable, OnApplicationShutdown } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
-import { Actor } from "./identity";
+import { Actor } from "../auth/identity";
 @Injectable()
 export class Database implements OnApplicationShutdown {
   readonly pool: Pool;

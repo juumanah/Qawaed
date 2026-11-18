@@ -1,6 +1,6 @@
 import { createApp } from "../src/app";
-import { Database } from "../src/database";
-import { Actor } from "../src/identity";
+import { Database } from "../src/database/database";
+import { Actor } from "../src/auth/identity";
 import request from "supertest";
 import pg from "pg";
 import { execFileSync } from "node:child_process";

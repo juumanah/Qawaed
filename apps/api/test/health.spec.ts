@@ -1,6 +1,7 @@
 import { ServiceUnavailableException } from "@nestjs/common";
-import { HealthController, createApp } from "../src/app";
-import { Database } from "../src/database";
+import { HealthController } from "../src/health/health.controller";
+import { createApp } from "../src/app";
+import { Database } from "../src/database/database";
 import request from "supertest";
 import pg from "pg";
 import { execFileSync } from "node:child_process";

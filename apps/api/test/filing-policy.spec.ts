@@ -1,4 +1,7 @@
-import { assertTransition, assertTransitionRole } from "../src/filing.policy";
+import {
+  assertTransition,
+  assertTransitionRole,
+} from "../src/filings/filing.policy";
 import {
   ForbiddenException,
   UnprocessableEntityException,
