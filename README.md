@@ -4,7 +4,7 @@
 
 Compliance work gets harder when it is unclear who can access a record, who can make a decision, and what changed along the way. Qawaed brings those responsibilities into one workflow, with separate data for each organization.
 
-**Current progress:** sign-in, revocable sessions, tenant-scoped filings, controlled reviews, optimistic concurrency and append-only audit history are implemented. Durable registry verification is also implemented; the full dashboard is next.
+Qawaed includes an Arabic/English workspace for submitting and reviewing filings, revocable sessions, tenant isolation, version-checked decisions, append-only audit history and background registry verification.
 
 ## Run
 
@@ -14,7 +14,7 @@ With Docker Desktop running, from the repository root:
 docker compose up --build -d --wait --wait-timeout 300
 ```
 
-Open http://localhost:3000. The homepage is still the foundation screen; the login/dashboard UI arrives in phase 5. API: http://localhost:4000. The web proxy exposes `/api/*`. Database: localhost:5432. These ports bind to loopback only.
+Open http://localhost:3000 and sign in with one of the demo identities below. API: http://localhost:4000. The web proxy exposes `/api/*`. Database: localhost:5432. These ports bind to loopback only. If port 5432 is already occupied by a local PostgreSQL service, resolve that conflict before starting Compose.
 
 Startup applies numbered SQL migrations and demo seed data without overwriting existing tenants, user credentials or filings. Ten fixed demo filings cover all five statuses across the two organizations. Their first audit event is an imported seed snapshot, not a fabricated review history. Never edit an applied migration; introduce a new version. `docker compose down` preserves the database volume. Do not use `down -v` on data you want to retain.
 
@@ -31,6 +31,37 @@ Local-demo password: `QawaedDemo!2026` (override `DEMO_PASSWORD` **before the fi
 | admin@qawaed.test | ADMIN | Global read visibility |
 
 Demo credentials and Compose database passwords are public development defaults. This Compose configuration is not a public production deployment.
+
+## Using the workspace
+
+- **Submitter:** create a draft in the validated two-step form, review its metadata, save it, then submit it for review. Drafts remain editable until submitted.
+- **Auditor:** start with filings under review, or select submitted filings to begin a review. Approval and rejection require an explicit decision; rejection also requires a reason.
+- **Admin:** browse filings across organizations with read-only access.
+- Use the header language toggle for Arabic/RTL or English/LTR. The language preference is stored locally; authentication stays in an HttpOnly cookie.
+- The primary review card and smaller status cards filter the list. The status menu also includes drafts and all filings. Desktop uses a table; narrow screens use filing cards.
+- Search matches the title or registry number **within the currently loaded page**, not the entire database. Lists contain up to 20 filings per page; pagination appears when needed.
+- Details show filing metadata, workflow progress, a separate registry result and an expandable audit timeline. A stale decision loads the latest filing and asks the reviewer to reconsider instead of retrying the old verdict.
+
+## Code map
+
+| Location | Responsibility |
+| --- | --- |
+| `apps/web/app/page.tsx` | Composes the workspace and dialogs |
+| `apps/web/hooks/use-workspace.ts` | Session state, requests, stale-response guards, polling and decisions |
+| `apps/web/components/workspace/` | Status summary, filing list and navigation |
+| `apps/web/components/` | Login, filing wizard and filing details |
+| `apps/web/components/ui/` | Shared shadcn/ui primitives |
+| `apps/web/lib/` | API client, types and Arabic/English text |
+| `apps/web/styles/` | Shared, workspace, dialog and login CSS; imported by `app/globals.css` |
+| `apps/api/src/app.ts`, `app.module.ts` | HTTP configuration and Nest dependency registration |
+| `apps/api/src/auth/` | Sessions, authentication and role guards |
+| `apps/api/src/filings/`, `tenants/` | Controllers, services and filing policy/DTOs |
+| `apps/api/src/registry/` | Mock endpoint, durable worker and restricted worker pool |
+| `apps/api/src/database/`, `health/` | Scoped transactions and readiness |
+| `apps/api/test/` | Unit and PostgreSQL/HTTP integration tests |
+| `db/migrations/`, `scripts/` | Versioned database setup, demo seed and verification scripts |
+
+Feature folders share one Nest application module and one deployment. The worker runs inside the API process; separate folders do not imply separate services.
 
 ## API contract
 
@@ -117,8 +148,8 @@ The worker's DB role can read/update job processing fields and read/insert mock 
 
 `GET /filings/:id` includes `verification: null` before approval, or a job summary with status, attempt, next available time, reference, timestamp and sanitized error. APPROVED remains the internal review verdict even if external verification ultimately fails. The result never rewrites a terminal filing or adds fictitious reviewer decisions to its audit. FAILED jobs need operator investigation; automatic infinite retry and a manual retry endpoint are deliberately not included.
 
-## Remaining milestones
+## Scope and limitations
 
-5. shadcn UI, Arabic/English, browser acceptance and final documentation.
+Password reset, user administration, MFA, file attachments and a live government registry connection are outside this implementation. The submission wizard collects metadata. Registry verification uses the simulated Nest endpoint. Search is page-local; no server-wide search endpoint is implemented.
 
-Password reset, user administration and MFA are outside this assessment milestone.
+Automated API checks do not replace browser acceptance. Before delivery, check both languages, narrow and wide layouts, keyboard navigation, account switching, form errors and conflicting decisions in two tabs. See `docs/UI_ATTRIBUTION.md` for interface references and attribution.
