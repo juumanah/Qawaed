@@ -32,6 +32,8 @@ Local-demo password: `QawaedDemo!2026` (override `DEMO_PASSWORD` **before the fi
 
 Demo credentials and Compose database passwords are public development defaults. This Compose configuration is not a public production deployment.
 
+Login allows 30 failed attempts per normalized email in 15 minutes. Successful logins do not consume that allowance. A separate ceiling of 300 failed requests per connecting IP protects against attempts across many accounts; behind the web proxy that ceiling is intentionally shared. Forwarded IP headers are not trusted. Limits are held in memory for this single API process; multiple replicas require a shared store. An account may temporarily be blocked by repeated attempts against it, and blocked responses include `Retry-After`.
+
 ## Using the workspace
 
 - **Submitter:** create a draft in the validated two-step form, review its metadata, save it, then submit it for review. Drafts remain editable until submitted.
@@ -117,7 +119,7 @@ CI defines a PostgreSQL test/build job and a Compose production smoke job. Run t
 - A global authentication guard protects routes by default. Health, login and logout bypass session authentication. The mock registry also bypasses sessions but requires a separate service secret; it is not an anonymously usable endpoint. The role guard denies access unless the route explicitly allows the current role.
 - Tenant queries use a transaction-scoped server identity and PostgreSQL RLS. `SET LOCAL` clears scope at commit/rollback. The runtime DB role is neither superuser nor BYPASSRLS and does not own tables. ADMIN can read all tenant rows but cannot write them.
 - RLS is defense against missing tenant filters in application queries, not against arbitrary SQL execution with the application's DB credential. Authentication tables are trusted server-internal tables; runtime can read users and manage sessions but cannot change users/roles. These tables have no public management endpoints.
-- Origin checks, strict DTO validation, Helmet and no-store responses protect the HTTP boundary. Login is limited to 30 requests per 15 minutes per observed source IP on a single API instance. Behind the web proxy this may aggregate clients; do not enable broad `trust proxy` to work around it. A deployment with trusted proxies/multiple replicas needs explicitly scoped proxy trust and a shared limiter.
+- Origin checks, strict DTO validation, Helmet and no-store responses protect the HTTP boundary. Login limits count failed attempts per normalized account, with a higher network ceiling for attempts across many accounts. Successful requests are excluded. Forwarded IP headers are ignored; multiple API replicas require a shared limiter store.
 - `COOKIE_SECURE=false` supports local HTTP. A public deployment requires HTTPS, secure cookies, managed secrets, appropriate network controls and a deployment-specific review. No claim of absolute security is made.
 
 ## Filing decisions and audit integrity

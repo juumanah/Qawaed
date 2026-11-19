@@ -4,7 +4,8 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
-import { rateLimit } from "express-rate-limit";
+import { loginLimits } from "./auth/login-limits";
+import { json } from "express";
 import { Request, Response, NextFunction } from "express";
 export async function createApp() {
   const app = await NestFactory.create(AppModule);
@@ -25,17 +26,10 @@ export async function createApp() {
     }
     next();
   });
-  // Per-instance protection for this single-API deployment. Shared rate limiting
-  // is required before scaling to multiple API replicas.
-  app.use(
-    "/auth/login",
-    rateLimit({
-      windowMs: 15 * 60 * 1000,
-      limit: 30,
-      standardHeaders: "draft-8",
-      legacyHeaders: false,
-    }),
-  );
+  // Parse before the limiter chooses its account key. Keep this global: Nest
+  // detects an installed JSON parser and will not register another one.
+  app.use(json({ limit: "100kb" }));
+  app.use("/auth/login", ...loginLimits());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
