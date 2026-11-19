@@ -5,6 +5,7 @@ import request from "supertest";
 import pg from "pg";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
+import { randomUUID } from "node:crypto";
 const origin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 const payload = {
   title: "Commercial license",
@@ -325,5 +326,54 @@ describe("filings lifecycle, tenant boundaries and conflicting decisions", () =>
     const r = await get("/filings?status=DRAFT&page=1").expect(200);
     expect(r.body.items.length).toBeLessThanOrEqual(20);
     expect(r.body.items.every((x: any) => x.status === "DRAFT")).toBe(true);
+  });
+
+  it("searches across pages with matching totals and no repeated results", async () => {
+    const term = `search-${randomUUID()}`;
+    await db.scoped(actors.s, (c) => c.query(
+      `INSERT INTO compliance_filings(tenant_id,created_by,title,identifier_cr,category,expiration_date)
+       SELECT $1,$2,$3 || ' ' || n,'9090909090','COMMERCIAL','2099-12-31'
+       FROM generate_series(1,21) AS n`, [actors.s.tenant_id, actors.s.id, term],
+    ));
+    const first = (await get(`/filings?search=${term.toUpperCase()}&page=1`).expect(200)).body;
+    const second = (await get(`/filings?search=${term}&page=2`).expect(200)).body;
+    expect(first.total).toBe(21);
+    expect(second.total).toBe(21);
+    expect(first.items).toHaveLength(20);
+    expect(second.items).toHaveLength(1);
+    expect(new Set([...first.items, ...second.items].map((f: any) => f.id)).size).toBe(21);
+    const approved = (await get(`/filings?search=${term}&status=APPROVED`).expect(200)).body;
+    expect(approved).toMatchObject({ total: 0, items: [] });
+    const cr = (await get("/filings?search=9090909090").expect(200)).body;
+    expect(cr.total).toBe(21);
+  });
+
+  it("keeps search totals and results inside tenant and owner boundaries", async () => {
+    const term = `isolation-${randomUUID()}`;
+    for (const key of ["s", "s2", "b"])
+      await post("/filings", { ...payload, title: term }, key).expect(201);
+    for (const [key, count] of [["s", 1], ["a", 2], ["b", 1], ["admin", 3]] as const) {
+      const result = (await get(`/filings?search=${term}`, key).expect(200)).body;
+      expect(result.total).toBe(count);
+      expect(result.items).toHaveLength(count);
+    }
+  });
+
+  it("treats search metacharacters as literal text, not SQL or wildcards", async () => {
+    const title = `literal-${randomUUID()} 100%_ready`;
+    const f = (await post("/filings", { ...payload, title }).expect(201)).body;
+    const result = (await get("/filings?search=" + encodeURIComponent("100%_ready")).expect(200)).body;
+    expect(result.total).toBe(1);
+    expect(result.items[0].id).toBe(f.id);
+    const injected = (await get("/filings?search=" + encodeURIComponent("' OR 1=1 --")).expect(200)).body;
+    expect(injected).toMatchObject({ total: 0, items: [] });
+  });
+
+  it("validates search length and treats whitespace as an empty query", async () => {
+    await get("/filings?search=" + "a".repeat(101)).expect(400);
+    await get("/filings?search=a&search=b").expect(400);
+    const all = (await get("/filings").expect(200)).body;
+    const blank = (await get("/filings?search=%20%20").expect(200)).body;
+    expect(blank).toEqual(all);
   });
 });

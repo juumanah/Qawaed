@@ -16,7 +16,12 @@ export function useWorkspace() {
     [loading, setLoading] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [search, setSearch] = useState("");
+    [search, setSearchValue] = useState(""),
+    [query, setQuery] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
   const [selected, setSelected] = useState<Filing | null>(null),
     [form, setForm] = useState(false),
     [editing, setEditing] = useState<Filing | undefined>(),
@@ -36,7 +41,8 @@ export function useWorkspace() {
     setTotal(0);
     setPage(1);
     setStatus("ALL");
-    setSearch("");
+    setSearchValue("");
+    setQuery("");
     setSelected(null);
     setForm(false);
     setEditing(undefined);
@@ -97,10 +103,11 @@ export function useWorkspace() {
       account = generation.current;
     setLoading(true);
     setItems([]);
+    if (search.trim() !== query) return; // Wait for typing to settle.
     try {
       const [list, summary] = await Promise.all([
         api<{ items: Filing[]; total: number }>(
-          `/filings?page=${page}${status === "ALL" ? "" : "&status=" + status}`,
+          `/filings?page=${page}${status === "ALL" ? "" : "&status=" + status}${query ? "&search=" + encodeURIComponent(query) : ""}`,
         ),
         api<{ status: string; count: number }[]>("/filings/summary"),
       ]);
@@ -121,7 +128,7 @@ export function useWorkspace() {
       if (request === listRequest.current && account === generation.current)
         setLoading(false);
     }
-  }, [page, status, report]);
+  }, [page, status, query, search, report]);
   useEffect(() => {
     if (actor) void load();
     return () => {
@@ -205,7 +212,14 @@ export function useWorkspace() {
   function chooseStatus(value: string) {
     setStatus(value);
     setPage(1);
-    setSearch("");
+    setSearchValue("");
+    setQuery("");
+  }
+  function setSearch(value: string) {
+    // Invalidate in-flight responses immediately, before the debounce completes.
+    listRequest.current++;
+    setSearchValue(value);
+    setPage(1);
   }
   function onSignedIn(user: Actor) {
     clearWorkspace();
@@ -245,7 +259,6 @@ export function useWorkspace() {
   }
   function changePage(value: number) {
     setPage(value);
-    setSearch("");
   }
   // Sidebar navigation keeps the existing search, unlike explicit status filters.
   function navigateStatus(value: string) {

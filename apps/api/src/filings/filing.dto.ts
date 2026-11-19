@@ -9,7 +9,7 @@ import {
   MinLength,
   Max,
 } from "class-validator";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 export const statuses = [
   "DRAFT",
   "SUBMITTED",
@@ -32,6 +32,9 @@ export class TransitionDto {
   @IsOptional() @IsString() @MaxLength(2000) rejection_reason?: string;
 }
 export class ListDto {
+  @IsOptional() @IsString() @MaxLength(100)
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
+  search?: string;
   @IsOptional() @IsIn(statuses) status?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100000) page = 1;
 }

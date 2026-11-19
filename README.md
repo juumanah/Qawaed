@@ -41,7 +41,7 @@ Login allows 30 failed attempts per normalized email in 15 minutes. Successful l
 - **Admin:** browse filings across organizations with read-only access.
 - Use the header language toggle for Arabic/RTL or English/LTR. The language preference is stored locally; authentication stays in an HttpOnly cookie.
 - The primary review card and smaller status cards filter the list. The status menu also includes drafts and all filings. Desktop uses a table; narrow screens use filing cards.
-- Search matches the title or registry number **within the currently loaded page**, not the entire database. Lists contain up to 20 filings per page; pagination appears when needed.
+- Search matches the title or registry number across all filings visible to your account within the selected status. Search is applied before pagination (20 rows per page), keeps tenant and owner isolation, and treats `%` and `_` as literal characters. Typing waits 300 ms before fetching results; changing pages preserves the query.
 - Details show filing metadata, workflow progress, a separate registry result and an expandable audit timeline. A stale decision loads the latest filing and asks the reviewer to reconsider instead of retrying the old verdict.
 
 ## Code map
@@ -75,7 +75,7 @@ Feature folders share one Nest application module and one deployment. The worker
 | POST | /auth/logout | Revoke session and clear cookie; safe to repeat |
 | GET | /tenants | ADMIN only; 403 for tenant roles |
 | GET | /tenants/:id | Own tenant or ADMIN; 404 for invisible/unknown tenant |
-| GET | /filings | Scoped, newest-first list; optional status and page (20 rows/page) |
+| GET | /filings | Scoped, newest-first list; optional status, search (up to 100 characters), and page (20 rows/page) |
 | GET | /filings/summary | Scoped counts grouped by state |
 | GET | /filings/:id | Filing plus ordered audit history and a separate verification result; invisible records return 404 |
 | POST | /filings | SUBMITTER creates DRAFT; tenant and owner come from session |
@@ -97,6 +97,8 @@ Invoke-RestMethod -Uri 'http://localhost:3000/api/auth/logout' -Method Post -Hea
 
 ## Tests
 
+After `npm ci`, run `npm run test:web` for pagination and login retry regression checks. CI runs these alongside the API tests and production build.
+
 The isolated test runner creates a uniquely named temporary database and removes it after the run. It does not test against or clear your demo database. Run one test process at a time per local PostgreSQL instance; setup uses shared application/worker roles with the configured passwords.
 
 ```sh
@@ -105,7 +107,7 @@ docker compose exec -T -e SMOKE_BASE_URL=http://web:3000 api node scripts/smoke-
 docker compose exec -T -e SMOKE_BASE_URL=http://web:3000 -e SMOKE_REGISTRY=true api node scripts/smoke-filings.mjs
 ```
 
-Jest runs 95 tests: 32 unit tests and 63 PostgreSQL/HTTP integration tests. The 20 registry tests cover durable deduplication, backoff, competing workers, stale leases, crash reconciliation, terminal immutability and access boundaries. This includes all 25 state pairs and 20 concurrent final decisions across two auditor accounts: one succeeds and 19 receive 409, with one final audit entry. The smoke scripts exercise the production web proxy, API and database together. The filings script leaves one clearly named demo filing per run for inspection. With `SMOKE_REGISTRY=true`, it also waits for the asynchronous result. The 30% failure simulation remains enabled: VERIFIED and a bounded FAILED after four attempts are both valid terminal outcomes, and the script prints which occurred. Deterministic tests force both success and failure. These are HTTP smoke checks, not browser UI tests.
+Jest runs 102 tests covering policy, PostgreSQL integration, HTTP behavior and reverse-proxy login limits. The separate web regression suite contains 8 tests. The 20 registry tests cover durable deduplication, backoff, competing workers, stale leases, crash reconciliation, terminal immutability and access boundaries. This includes all 25 state pairs and 20 concurrent final decisions across two auditor accounts: one succeeds and 19 receive 409, with one final audit entry. The smoke scripts exercise the production web proxy, API and database together. The filings script leaves one clearly named demo filing per run for inspection. With `SMOKE_REGISTRY=true`, it also waits for the asynchronous result. The 30% failure simulation remains enabled: VERIFIED and a bounded FAILED after four attempts are both valid terminal outcomes, and the script prints which occurred. Deterministic tests force both success and failure. These are HTTP smoke checks, not browser UI tests.
 
 Host development: Node.js 22+, PostgreSQL 17, `npm ci`. Supply `MIGRATION_DATABASE_URL`, `DATABASE_URL`, `APP_DB_PASSWORD` (16+ characters), `SEED_DEMO=true`, `WORKER_DATABASE_URL`, `WORKER_DB_PASSWORD` (16+ characters), `REGISTRY_SECRET` (32+ characters), and optionally `DEMO_PASSWORD`/`WEB_ORIGIN` as process environment variables. Scripts do not automatically load `.env`. Set `WORKER_ENABLED=false` for direct tests, or use `npm run test:isolated`. Set `WORKER_ENABLED=true` to run the background worker during development (Compose already does this). Then run `npm run db:setup`, `npm run test:isolated`, `npm run build`; start development with `npm run dev:api` and `npm run dev:web` in separate terminals.
 
@@ -152,6 +154,6 @@ The worker's DB role can read/update job processing fields and read/insert mock 
 
 ## Scope and limitations
 
-Password reset, user administration, MFA, file attachments and a live government registry connection are outside this implementation. The submission wizard collects metadata. Registry verification uses the simulated Nest endpoint. Search is page-local; no server-wide search endpoint is implemented.
+Password reset, user administration, MFA, file attachments and a live government registry connection are outside this implementation. The submission wizard collects metadata. Registry verification uses the simulated Nest endpoint. Search is scoped to the authenticated account and selected status.
 
 Automated API checks do not replace browser acceptance. Before delivery, check both languages, narrow and wide layouts, keyboard navigation, account switching, form errors and conflicting decisions in two tabs. See `docs/UI_ATTRIBUTION.md` for interface references and attribution.

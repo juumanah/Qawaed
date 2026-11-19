@@ -45,15 +45,16 @@ export class FilingsService {
       const params = [
         q.status ?? null,
         actor.role === "SUBMITTER" ? actor.id : null,
+        q.search ?? "",
       ];
       const where =
-        "WHERE ($1::text IS NULL OR f.status=$1) AND ($2::uuid IS NULL OR f.created_by=$2)";
+        "WHERE ($1::text IS NULL OR f.status=$1) AND ($2::uuid IS NULL OR f.created_by=$2) AND ($3::text='' OR strpos(lower(f.title),lower($3))>0 OR strpos(f.identifier_cr,$3)>0)";
       const total = await c.query(
         `SELECT count(*)::int AS count FROM compliance_filings f ${where}`,
         params,
       );
       const result = await c.query(
-        `SELECT f.*,t.name AS tenant_name FROM compliance_filings f JOIN tenants t ON t.id=f.tenant_id ${where} ORDER BY f.created_at DESC,f.id LIMIT 20 OFFSET $3`,
+        `SELECT f.*,t.name AS tenant_name FROM compliance_filings f JOIN tenants t ON t.id=f.tenant_id ${where} ORDER BY f.created_at DESC,f.id LIMIT 20 OFFSET $4`,
         [...params, (q.page - 1) * 20],
       );
       return {

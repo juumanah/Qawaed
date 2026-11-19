@@ -67,11 +67,6 @@ export function FilingList({
       {label(value)}
     </Badge>
   );
-  const filtered = items.filter((f) =>
-    (f.title + " " + f.identifier_cr)
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  );
   const allCount = Object.values(counts).reduce((a, b) => a + b, 0);
   return (
     <Card
@@ -129,9 +124,9 @@ export function FilingList({
         <div className="search-box">
           <Search size={16} aria-hidden="true" />
           <Input
-            aria-describedby={total > 20 ? "search-scope" : undefined}
             aria-label={t.search}
             placeholder={t.search}
+            maxLength={100}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -146,11 +141,6 @@ export function FilingList({
             </button>
           )}
         </div>
-        {total > 20 && (
-          <p id="search-scope" className="search-scope">
-            {t.searchScope}
-          </p>
-        )}
       </div>
       <div className="desktop-filings">
         <Table>
@@ -163,7 +153,7 @@ export function FilingList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(!loading ? filtered : []).map((f) => (
+            {(!loading ? items : []).map((f) => (
               <TableRow
                 key={f.id}
                 className="filing-row"
@@ -200,7 +190,7 @@ export function FilingList({
         </Table>
       </div>
       <ul className="mobile-filings">
-        {(!loading ? filtered : []).map((f) => (
+        {(!loading ? items : []).map((f) => (
           <li key={f.id}>
             <button className="filing-card" onClick={() => void open(f.id)}>
               <strong dir="auto">{f.title}</strong>
@@ -220,7 +210,7 @@ export function FilingList({
           </li>
         ))}
       </ul>
-      {(loading || !filtered.length) && (
+      {(loading || !items.length) && (
         <div className="empty">
           <Files size={32} />
           <h3>{loading ? t.loading : search ? t.noMatches : t.empty}</h3>
