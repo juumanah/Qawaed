@@ -33,6 +33,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run test:web
       - run: npm run build
   compose:
     runs-on: ubuntu-latest

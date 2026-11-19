@@ -227,7 +227,7 @@ export function FilingList({
           <p>{!loading && (search ? t.adjustSearch : t.emptyText)}</p>
         </div>
       )}
-      {total > 20 && (
+      {(total > 20 || page > 1) && (
         <div className="pagination">
           <span>
             {t.page} {page} {t.of} {Math.max(1, Math.ceil(total / 20))} ·{" "}

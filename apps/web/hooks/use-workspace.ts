@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, Actor, Filing } from "@/lib/api";
 import { copy } from "@/lib/copy";
+import { pageForTotal } from "@/lib/pagination";
 export function useWorkspace() {
   const [lang, setLang] = useState<"en" | "ar">("en");
   const t = copy[lang];
@@ -105,6 +106,11 @@ export function useWorkspace() {
       ]);
       if (request !== listRequest.current || account !== generation.current)
         return;
+      const nextPage = pageForTotal(page, list.total);
+      if (nextPage !== page) {
+        setPage(nextPage);
+        return; // The page effect reloads the remaining results.
+      }
       setItems(list.items);
       setTotal(list.total);
       setCounts(Object.fromEntries(summary.map((s) => [s.status, s.count])));
