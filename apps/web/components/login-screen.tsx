@@ -1,11 +1,12 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Check, ShieldCheck, LockKeyhole, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, ApiError, type Actor } from "@/lib/api";
 import { copy, labels } from "@/lib/copy";
+import { remainingSeconds } from "@/lib/retry-after";
 export function LoginScreen({
   lang,
   language,
@@ -21,6 +22,19 @@ export function LoginScreen({
   const label = (key: string) => labels[key]?.[lang === "ar" ? 1 : 0] ?? key;
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const [retryUntil, setRetryUntil] = useState(0);
+  const [waitSeconds, setWaitSeconds] = useState(0);
+  useEffect(() => {
+    if (!retryUntil) return;
+    const update = () => {
+      const seconds = remainingSeconds(retryUntil);
+      setWaitSeconds(seconds);
+      if (!seconds) setRetryUntil(0);
+    };
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [retryUntil]);
   return (
     <div className="login">
       <section className="login-story">
@@ -60,7 +74,7 @@ export function LoginScreen({
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              if (busy) return;
+              if (busy || remainingSeconds(retryUntil) > 0) return;
               setBusy(true);
               setError("");
               const data = new FormData(e.currentTarget);
@@ -72,6 +86,13 @@ export function LoginScreen({
                   }),
                 );
               } catch (e) {
+                if (e instanceof ApiError && e.status === 429) {
+                  const seconds = Math.max(1, e.retryAfterSeconds ?? 60);
+                  setWaitSeconds(seconds);
+                  setRetryUntil(Date.now() + seconds * 1000);
+                  setError("");
+                  return;
+                }
                 setError(
                   !(e instanceof ApiError && e.status === 401)
                     ? t.error
@@ -101,12 +122,18 @@ export function LoginScreen({
               required
               autoComplete="current-password"
             />
-            {(error || message) && (
+            {waitSeconds > 0 && (
+              <div>
+                <p role="alert" className="error">{t.rateLimited}</p>
+                <p>{t.retryIn.replace("{seconds}", String(waitSeconds))}</p>
+              </div>
+            )}
+            {!waitSeconds && (error || message) && (
               <p role="alert" className="error">
                 {error || message}
               </p>
             )}
-            <Button disabled={busy} className="w-full">
+            <Button disabled={busy || waitSeconds > 0} className="w-full">
               {busy ? t.loading : t.login}
               <ArrowRight size={16} />
             </Button>

@@ -1,7 +1,9 @@
+import { retryAfterSeconds } from "./retry-after";
 export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public retryAfterSeconds?: number,
   ) {
     super(message);
   }
@@ -24,6 +26,7 @@ export async function api<T = unknown>(
       Array.isArray(data.message)
         ? data.message.join(", ")
         : (data.message ?? "Request failed"),
+      res.status === 429 ? retryAfterSeconds(res.headers.get("Retry-After")) : undefined,
     );
   return data;
 }

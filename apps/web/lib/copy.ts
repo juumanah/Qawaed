@@ -1,5 +1,7 @@
 export const copy = {
   en: {
+    rateLimited: "Too many sign-in attempts. Please wait before trying again.",
+    retryIn: "You can try again in {seconds} seconds.",
     brand: "Qawaed",
     tag: "COMPLIANCE & AUDIT VAULT",
     workspace: "Workspace",
@@ -122,6 +124,8 @@ export const copy = {
     retry: "Try again",
   },
   ar: {
+    rateLimited: "محاولات تسجيل الدخول كثيرة. انتظري قليلًا قبل المحاولة مجددًا.",
+    retryIn: "يمكنك المحاولة مجددًا بعد {seconds} ثانية.",
     brand: "قواعد",
     tag: "منصة الامتثال وسجل التدقيق",
     workspace: "مساحة العمل",
